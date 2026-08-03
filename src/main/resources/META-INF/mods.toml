@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="LGPL-3.0-only"
+[[mods]]
+modId="oculus"
+version="${version}"
+displayName="Oculus DH3 Compat (Unofficial Fork)"
+logoFile="oculus-logo.png"
+authors="Oculus and Iris contributors; fork maintained by fangyu"
+description='''
+Unofficial Oculus 1.16.5 fork with Distant Horizons 3.x compatibility.
+Replaces Oculus and must not be installed alongside an official Oculus jar.
+'''
+
+[[dependencies.oculus]]
+modId="distanthorizons"
+mandatory=false
+versionRange="[3.2.0-b,3.3.0)"
+ordering="BEFORE"
+side="CLIENT"
