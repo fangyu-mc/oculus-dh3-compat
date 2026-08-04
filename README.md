@@ -4,8 +4,6 @@ Oculus DH3 Compat is an unofficial Oculus 1.16.5 fork that adds support for
 Distant Horizons 3.x. It is intended for Minecraft 1.16.5 modpacks that use
 Oculus shaders together with recent Distant Horizons 3.x builds.
 
-This project is not affiliated with or endorsed by the Oculus or Iris teams.
-
 ## Compatibility
 
 - Minecraft 1.16.5
@@ -16,16 +14,6 @@ This project is not affiliated with or endorsed by the Oculus or Iris teams.
 The fork keeps Oculus's `oculus` mod ID so that existing compatibility checks
 continue to work. It replaces Oculus and must not be installed alongside an
 official Oculus jar.
-
-## Installation
-
-1. Remove any existing Oculus jar from the `mods` directory.
-2. Install Rubidium and a supported Distant Horizons build.
-3. Install the Oculus DH3 Compat jar.
-
-When reporting a rendering problem, include `latest.log`, the shader pack name,
-GPU model, graphics driver version, and the exact Oculus DH3 Compat and Distant
-Horizons versions.
 
 ## Changes from Oculus
 
@@ -48,3 +36,6 @@ parts of that groundwork and updates the integration for Distant Horizons 3.x.
 Oculus DH3 Compat is distributed under the
 [GNU Lesser General Public License v3.0](LICENSE). See [NOTICE.md](NOTICE.md)
 for attribution and fork information.
+
+*This is an unofficial community fork and is not affiliated with the Oculus or
+Iris teams.*
