@@ -32,6 +32,11 @@ public final class DHCompat implements DHCompatBridge.Lifecycle {
 	private static DHCompat active;
 	private static final float[] projection = new Matrix4f().get(new float[16]);
 	private static final float[] projectionInverse = new Matrix4f().get(new float[16]);
+	private static final float[] modelView = new Matrix4f().get(new float[16]);
+	private static final float[] modelViewInverse = new Matrix4f().get(new float[16]);
+	private static final ProjectionHistory modelViewHistory = new ProjectionHistory();
+	private static float nearPlane, farPlane;
+	private static final ProjectionHistory projectionHistory = new ProjectionHistory();
 	private static int depthTexture;
 	private static boolean transparentPass;
 	private static boolean cloudEventBound;
@@ -72,6 +77,11 @@ public final class DHCompat implements DHCompatBridge.Lifecycle {
 			.orElse(terrainFramebuffer);
 		framebufferWrapper = new DhFrameBufferWrapper(terrainFramebuffer, translucentFramebuffer);
 		active = this;
+		projectionHistory.reset();
+		modelViewHistory.reset();
+		System.arraycopy(IDENTITY,0,modelView,0,16);
+		System.arraycopy(IDENTITY,0,modelViewInverse,0,16);
+		nearPlane=farPlane=0;
 		OverrideInjector.INSTANCE.bind(IDhApiShaderProgram.class, shaderProgram);
 		OverrideInjector.INSTANCE.bind(IDhApiFramebuffer.class, framebufferWrapper);
 		refreshDepthTexture();
@@ -118,6 +128,11 @@ public final class DHCompat implements DHCompatBridge.Lifecycle {
 			transparentPass = false;
 			System.arraycopy(IDENTITY, 0, projection, 0, IDENTITY.length);
 			System.arraycopy(IDENTITY, 0, projectionInverse, 0, IDENTITY.length);
+			projectionHistory.reset();
+			modelViewHistory.reset();
+			System.arraycopy(IDENTITY,0,modelView,0,16);
+			System.arraycopy(IDENTITY,0,modelViewInverse,0,16);
+			nearPlane=farPlane=0;
 		}
 	}
 
@@ -268,10 +283,27 @@ public final class DHCompat implements DHCompatBridge.Lifecycle {
 		return getDepthTextureNoTranslucents();
 	}
 
-	static void updateRenderParameters(Matrix4f dhProjection, Matrix4f dhProjectionInverse) {
+	static void updateRenderParameters(Matrix4f dhProjection, Matrix4f dhProjectionInverse,
+			Matrix4f dhModelView, Matrix4f dhModelViewInverse, float near, float far) {
+		dhModelView.get(modelView);
+		dhModelViewInverse.get(modelViewInverse);
+		nearPlane=near; farPlane=far;
+		modelViewHistory.update(net.coderbot.iris.uniforms.SystemTimeUniforms.COUNTER.getAsInt(), modelView);
 		dhProjection.get(projection);
 		dhProjectionInverse.get(projectionInverse);
+		projectionHistory.update(net.coderbot.iris.uniforms.SystemTimeUniforms.COUNTER.getAsInt(), projection);
 	}
+
+	@Override
+	public float[] bridgeGetPreviousProjection() {
+		return projectionHistory.previous();
+	}
+
+	@Override public float[] bridgeGetModelView() { return modelView; }
+	@Override public float[] bridgeGetModelViewInverse() { return modelViewInverse; }
+	@Override public float[] bridgeGetPreviousModelView() { return modelViewHistory.previous(); }
+	@Override public float bridgeGetNearPlane() { return nearPlane; }
+	@Override public float bridgeGetFarPlane() { return farPlane; }
 
 	static Matrix4f createProjectionMatrix(DhApiRenderParam param) {
 		com.mojang.math.Matrix4f captured = CapturedRenderingState.INSTANCE.getGbufferProjection();
@@ -280,6 +312,8 @@ public final class DHCompat implements DHCompatBridge.Lifecycle {
 		}
 
 		Matrix4f projection = ((Matrix4fAccess) (Object) captured).convertToJOML();
+		if (!Boolean.getBoolean("oculus.dh.legacyProjection")
+				&& ProjectionDepth.extend(projection, param.nearClipPlane, param.farClipPlane)) return projection;
 		return new Matrix4f().setPerspective(projection.perspectiveFov(),
 			projection.m11() / projection.m00(), param.nearClipPlane, param.farClipPlane);
 	}

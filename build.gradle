@@ -148,3 +148,33 @@ publishing {
 	repositories {
 	}
 }
+
+tasks.register('dhMatrixCheckCompile', JavaCompile) {
+	dependsOn classes
+	source fileTree('tests') { include 'Projection*Check.java' }
+	classpath = sourceSets.main.output
+	destinationDirectory.set(layout.buildDirectory.dir('dh-matrix-check'))
+	options.release = 8
+}
+['ProjectionHistoryCheck', 'ProjectionDepthCheck'].each { checkClass ->
+	def checkTask = tasks.register(checkClass, JavaExec) {
+		dependsOn dhMatrixCheckCompile
+		classpath = files(layout.buildDirectory.dir('dh-matrix-check')) + sourceSets.main.output
+		mainClass = 'net.coderbot.iris.compat.dh.' + checkClass
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('terrainOrderCheckCompile', JavaCompile) {
+    dependsOn classes
+    source 'tests/FrontToBackSorterCheck.java'
+    classpath = sourceSets.main.output
+    destinationDirectory.set(layout.buildDirectory.dir('terrain-order-check'))
+    options.release = 8
+}
+tasks.register('terrainOrderCheck', JavaExec) {
+    dependsOn terrainOrderCheckCompile
+    classpath = files(layout.buildDirectory.dir('terrain-order-check')) + sourceSets.main.output
+    mainClass = 'net.coderbot.iris.compat.sodium.impl.FrontToBackSorterCheck'
+}
+check.dependsOn terrainOrderCheck

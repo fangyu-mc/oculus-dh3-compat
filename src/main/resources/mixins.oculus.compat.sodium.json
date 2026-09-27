@@ -25,6 +25,7 @@
     "separate_ao.MixinBlockRenderer",
     "separate_ao.MixinFluidRenderer",
     "shader_overrides.MixinChunkProgram",
+    "shader_overrides.MixinFrontToBackRegions",
     "shader_overrides.MixinChunkRenderManager",
     "shader_overrides.MixinChunkRenderShaderBackend",
     "shader_overrides.MixinShaderType",

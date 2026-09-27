@@ -10,6 +10,8 @@ import org.lwjgl.opengl.GL11C;
 import org.lwjgl.opengl.GL15C;
 import org.lwjgl.opengl.GL20C;
 import org.lwjgl.opengl.GL30C;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL43C;
 import org.lwjgl.system.MemoryStack;
 
 import com.google.common.primitives.Ints;
@@ -45,9 +47,14 @@ public final class IrisLodRenderProgram implements IDhApiShaderProgram {
 	private final ProgramState solid;
 	private final ProgramState translucent;
 	private final int vao;
+	private final boolean separateVertexBinding;
+	private boolean vertexFormatInitialized;
 	private final Matrix4f projectionInverseScratch = new Matrix4f();
 	private final Matrix4f modelViewInverseScratch = new Matrix4f();
 	private final Matrix4f normalMatrixScratch = new Matrix4f();
+	private final Matrix4f cullingMatrixScratch = new Matrix4f();
+	private final float[] cullingMatrix = new float[16];
+	private boolean cullingMatrixReady;
 	private ProgramState active;
 
 	private IrisLodRenderProgram(ProgramState solid, ProgramState translucent) {
@@ -55,6 +62,8 @@ public final class IrisLodRenderProgram implements IDhApiShaderProgram {
 		this.translucent = translucent;
 		this.active = solid;
 		this.vao = GL30C.glGenVertexArrays();
+		this.separateVertexBinding = GL.getCapabilities().OpenGL43
+			&& !Boolean.getBoolean("oculus.dh.legacyVertexBinding");
 	}
 
 	public static IrisLodRenderProgram create(ProgramSource terrain, Optional<ProgramSource> water,
@@ -105,10 +114,13 @@ public final class IrisLodRenderProgram implements IDhApiShaderProgram {
 		active = param.renderPass == EDhApiRenderPass.TRANSPARENT ? translucent : solid;
 		Matrix4f projection = DHCompat.createProjectionMatrix(param);
 		Matrix4f modelView = DHCompat.getModelViewMatrix(param);
+		cullingMatrixScratch.set(projection).mul(modelView).get(cullingMatrix);
+		cullingMatrixReady = param.renderPass == EDhApiRenderPass.OPAQUE;
 		projectionInverseScratch.set(projection).invert();
 		modelViewInverseScratch.set(modelView).invert();
 		normalMatrixScratch.set(modelViewInverseScratch).transpose();
-		DHCompat.updateRenderParameters(projection, projectionInverseScratch);
+		DHCompat.updateRenderParameters(projection, projectionInverseScratch, modelView, modelViewInverseScratch,
+			param.nearClipPlane, param.farClipPlane);
 		active.bind();
 		GL30C.glBindVertexArray(vao);
 		active.updateResources();
@@ -131,10 +143,37 @@ public final class IrisLodRenderProgram implements IDhApiShaderProgram {
 		}
 	}
 
+	/** Optional experimental consumer uses the exact matrices sent to this program.
+	 * Only the audited pack/pass is exposed; other shader semantics fail open. */
+	public float[] getConservativeCullingMatrix() {
+		return cullingMatrixReady
+			&& !net.coderbot.iris.shadows.ShadowRenderingState.areShadowsCurrentlyBeingRendered()
+			&& "ComplementaryReimagined_r5.8.1.zip".equals(net.coderbot.iris.Iris.getCurrentPackName())
+			? cullingMatrix : null;
+	}
+
 	@Override
 	public void bindVertexBuffer(int vbo) {
 		GL30C.glBindVertexArray(vao);
 		GL15C.glBindBuffer(GL15C.GL_ARRAY_BUFFER, vbo);
+		if (separateVertexBinding) {
+			if (!vertexFormatInitialized) {
+				// Format belongs to this privately owned VAO. Buffer storage may change,
+				// so always rebind the supplied buffer; do not cache VBO identities.
+				GL20C.glEnableVertexAttribArray(0);
+				GL20C.glEnableVertexAttribArray(1);
+				GL20C.glEnableVertexAttribArray(2);
+				GL43C.glVertexAttribIFormat(0, 4, GL20C.GL_UNSIGNED_SHORT, 0);
+				GL43C.glVertexAttribFormat(1, 4, GL20C.GL_UNSIGNED_BYTE, true, 8);
+				GL43C.glVertexAttribIFormat(2, 4, GL20C.GL_UNSIGNED_BYTE, 12);
+				GL43C.glVertexAttribBinding(0, 0);
+				GL43C.glVertexAttribBinding(1, 0);
+				GL43C.glVertexAttribBinding(2, 0);
+				vertexFormatInitialized = true;
+			}
+			GL43C.glBindVertexBuffer(0, vbo, 0L, 16);
+			return;
+		}
 		GL20C.glEnableVertexAttribArray(0);
 		GL20C.glEnableVertexAttribArray(1);
 		GL20C.glEnableVertexAttribArray(2);

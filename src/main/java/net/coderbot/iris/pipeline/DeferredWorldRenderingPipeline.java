@@ -1088,7 +1088,8 @@ public class DeferredWorldRenderingPipeline implements WorldRenderingPipeline, R
 
 		isRenderingFullScreenPass = true;
 
-		deferredRenderer.renderAll();
+		RenderStageObserver.begin(12);
+		try { deferredRenderer.renderAll(); } finally { RenderStageObserver.end(12); }
 
 		RenderSystem.enableBlend();
 		RenderSystem.enableAlphaTest();
@@ -1110,7 +1111,8 @@ public class DeferredWorldRenderingPipeline implements WorldRenderingPipeline, R
 		if (shouldRenderPrepareBeforeShadow) {
 			isRenderingFullScreenPass = true;
 
-			prepareRenderer.renderAll();
+			RenderStageObserver.begin(11);
+		try { prepareRenderer.renderAll(); } finally { RenderStageObserver.end(11); }
 
 			isRenderingFullScreenPass = false;
 		}
@@ -1118,7 +1120,8 @@ public class DeferredWorldRenderingPipeline implements WorldRenderingPipeline, R
 		if (shadowRenderer != null) {
 			isRenderingShadow = true;
 
-			shadowRenderer.renderShadows(levelRenderer, playerCamera);
+			RenderStageObserver.begin(0);
+		try { shadowRenderer.renderShadows(levelRenderer, playerCamera); } finally { RenderStageObserver.end(0); }
 
 			// needed to remove blend mode overrides and similar
 			beginPass(null);
@@ -1128,7 +1131,8 @@ public class DeferredWorldRenderingPipeline implements WorldRenderingPipeline, R
 		if (!shouldRenderPrepareBeforeShadow) {
 			isRenderingFullScreenPass = true;
 
-			prepareRenderer.renderAll();
+			RenderStageObserver.begin(11);
+		try { prepareRenderer.renderAll(); } finally { RenderStageObserver.end(11); }
 
 			isRenderingFullScreenPass = false;
 		}
@@ -1222,8 +1226,10 @@ public class DeferredWorldRenderingPipeline implements WorldRenderingPipeline, R
 
 		centerDepthSampler.sampleCenterDepth();
 
-		compositeRenderer.renderAll();
-		finalPassRenderer.renderFinalPass();
+		RenderStageObserver.begin(13);
+		try { compositeRenderer.renderAll(); } finally { RenderStageObserver.end(13); }
+		RenderStageObserver.begin(14);
+		try { finalPassRenderer.renderFinalPass(); } finally { RenderStageObserver.end(14); }
 		colorSpaceConverter.process(Minecraft.getInstance().getMainRenderTarget().getColorTextureId());
 
 		isRenderingFullScreenPass = false;

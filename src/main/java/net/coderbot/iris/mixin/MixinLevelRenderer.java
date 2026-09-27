@@ -156,11 +156,13 @@ public class MixinLevelRenderer {
 
 	@Inject(method = RENDER_LAYER, at = @At("HEAD"))
 	private void iris$beginTerrainLayer(RenderType renderType, PoseStack poseStack, double cameraX, double cameraY, double cameraZ, CallbackInfo callback) {
+		net.coderbot.iris.pipeline.RenderStageObserver.beginTerrain(renderType);
 		pipeline.setPhase(WorldRenderingPhase.fromTerrainRenderType(renderType));
 	}
 
 	@Inject(method = RENDER_LAYER, at = @At("RETURN"))
 	private void iris$endTerrainLayer(RenderType renderType, PoseStack poseStack, double cameraX, double cameraY, double cameraZ, CallbackInfo callback) {
+		net.coderbot.iris.pipeline.RenderStageObserver.endTerrain(renderType);
 		pipeline.setPhase(WorldRenderingPhase.NONE);
 	}
 

@@ -94,6 +94,10 @@ public final class DHCompatBridge {
 		return active.bridgeGetProjectionInverse();
 	}
 
+	public static float[] getPreviousProjection() {
+		return active.bridgeGetPreviousProjection();
+	}
+
 	public static int getDepthTexture() {
 		return active.bridgeGetDepthTexture();
 	}
@@ -102,7 +106,18 @@ public final class DHCompatBridge {
 		return active.bridgeGetDepthTextureNoTranslucents();
 	}
 
+	public static float[] getModelView() { return active.bridgeGetModelView(); }
+	public static float[] getModelViewInverse() { return active.bridgeGetModelViewInverse(); }
+	public static float[] getPreviousModelView() { return active.bridgeGetPreviousModelView(); }
+	public static float getNearPlane() { return active.bridgeGetNearPlane(); }
+	public static float getFarPlane() { return active.bridgeGetFarPlane(); }
+
 	public interface Lifecycle {
+		default float[] bridgeGetModelView() { return IDENTITY; }
+		default float[] bridgeGetModelViewInverse() { return IDENTITY; }
+		default float[] bridgeGetPreviousModelView() { return IDENTITY; }
+		default float bridgeGetNearPlane() { return 0; }
+		default float bridgeGetFarPlane() { return 0; }
 		void destroy();
 
 		int bridgeGetRenderDistance();
@@ -110,6 +125,8 @@ public final class DHCompatBridge {
 		float[] bridgeGetProjection();
 
 		float[] bridgeGetProjectionInverse();
+
+		default float[] bridgeGetPreviousProjection() { return IDENTITY; }
 
 		int bridgeGetDepthTexture();
 

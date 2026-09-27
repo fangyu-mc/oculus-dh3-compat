@@ -163,8 +163,12 @@ public class IrisSamplers {
 				"gdepthtex", "depthtex0");
 		samplers.addDynamicSampler(renderTargets.getDepthTextureNoTranslucents()::getTextureId,
 				"depthtex1");
-		samplers.addDynamicSampler(renderTargets.getDepthTextureNoHand()::getTextureId,
-				"depthtex2");
+		// Check the linked uniform before obtaining the texture: the getter records
+		// a real consumer so RenderTargets can skip unused full-resolution copies.
+		if (samplers.hasSampler("depthtex2")) {
+			samplers.addDynamicSampler(renderTargets.getDepthTextureNoHand()::getTextureId,
+					"depthtex2");
+		}
 		addDhDepthSamplers(samplers);
 	}
 

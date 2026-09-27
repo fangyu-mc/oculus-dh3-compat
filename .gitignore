@@ -32,3 +32,12 @@ run/
 
 # Local dependency copies; Gradle resolves release dependencies from Maven.
 libs/*.jar
+
+# 本地备份 / 构建过程产物（不入库，2026-09-27）
+backups/
+deployment-backups/
+animation-backups/
+build-*/
+build-*.log
+__pycache__/
+*thread-dump*.txt

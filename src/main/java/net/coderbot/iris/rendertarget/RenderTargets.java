@@ -36,6 +36,10 @@ public class RenderTargets {
 	private boolean fullClearRequired;
 	private boolean translucentDepthDirty;
 	private boolean handDepthDirty;
+	// Demand is monotonic for this pipeline lifetime. External texture consumers also
+	// register demand via the public getter; rebuilding the pipeline resets it.
+	private boolean handDepthRequired = Boolean.getBoolean("oculus.legacyDepthCopies");
+	private boolean unusedHandDepthReported;
 
 	private int cachedDepthBufferVersion;
 
@@ -109,6 +113,7 @@ public class RenderTargets {
 	}
 
 	public DepthTexture getDepthTextureNoHand() {
+		handDepthRequired = true;
 		return noHand;
 	}
 
@@ -185,6 +190,15 @@ public class RenderTargets {
 	}
 
 	public void copyPreHandDepth() {
+		// Keep first-use/resize initialization, including the existing format conversion.
+		// Afterwards an unreferenced snapshot needs no per-frame GPU transfer.
+		if (!handDepthRequired && !handDepthDirty) {
+			if (!unusedHandDepthReported) {
+				net.coderbot.iris.Iris.logger.info("Skipping unused depthtex2 per-frame copy (no registered consumer).");
+				unusedHandDepthReported = true;
+			}
+			return;
+		}
 		if (handDepthDirty) {
 			handDepthDirty = false;
 			RenderSystem.bindTexture(noHand.getTextureId());

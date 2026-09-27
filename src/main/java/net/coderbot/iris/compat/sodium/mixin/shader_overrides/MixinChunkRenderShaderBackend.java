@@ -143,6 +143,7 @@ public class MixinChunkRenderShaderBackend implements ChunkRenderBackendExt {
 
 	@Override
 	public void iris$begin(PoseStack poseStack, BlockRenderPass pass) {
+		net.coderbot.iris.compat.sodium.impl.NearTerrainOrder.begin(pass);
 		if (ShadowRenderingState.areShadowsCurrentlyBeingRendered()) {
 			// No back face culling during the shadow pass
 			// TODO: Hopefully this won't be necessary in the future...
@@ -170,6 +171,7 @@ public class MixinChunkRenderShaderBackend implements ChunkRenderBackendExt {
 
 	@Inject(method = "end", at = @At("RETURN"))
 	private void iris$onEnd(PoseStack poseStack, CallbackInfo ci) {
+		net.coderbot.iris.compat.sodium.impl.NearTerrainOrder.end();
 		ProgramUniforms.clearActiveUniforms();
 		ProgramSamplers.clearActiveSamplers();
 		Iris.getPipelineManager().getPipeline().ifPresent(WorldRenderingPipeline::endSodiumTerrainRendering);

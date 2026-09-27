@@ -108,7 +108,13 @@ public final class CommonUniforms {
 		uniforms
 			.uniform1i(PER_FRAME, "dhRenderDistance", DHCompatBridge::getRenderDistance)
 			.uniformMatrixFromArray(PER_FRAME, "dhProjection", DHCompatBridge::getProjection)
-			.uniformMatrixFromArray(PER_FRAME, "dhProjectionInverse", DHCompatBridge::getProjectionInverse);
+			.uniformMatrixFromArray(PER_FRAME, "dhProjectionInverse", DHCompatBridge::getProjectionInverse)
+			.uniformMatrixFromArray(PER_FRAME, "dhPreviousProjection", DHCompatBridge::getPreviousProjection)
+			.uniformMatrixFromArray(PER_FRAME, "dhModelView", DHCompatBridge::getModelView)
+			.uniformMatrixFromArray(PER_FRAME, "dhModelViewInverse", DHCompatBridge::getModelViewInverse)
+			.uniformMatrixFromArray(PER_FRAME, "dhPreviousModelView", DHCompatBridge::getPreviousModelView)
+			.uniform1f(PER_FRAME, "dhNearPlane", (net.coderbot.iris.gl.uniform.FloatSupplier) DHCompatBridge::getNearPlane)
+			.uniform1f(PER_FRAME, "dhFarPlane", (net.coderbot.iris.gl.uniform.FloatSupplier) DHCompatBridge::getFarPlane);
 
 		SmoothedVec2f eyeBrightnessSmooth = new SmoothedVec2f(directives.getEyeBrightnessHalfLife(), directives.getEyeBrightnessHalfLife(), CommonUniforms::getEyeBrightness, updateNotifier);
 
