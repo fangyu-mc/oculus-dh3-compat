@@ -2,6 +2,7 @@ package net.coderbot.iris.compat.sodium.mixin;
 
 import java.util.List;
 import java.util.Set;
+import net.coderbot.iris.diagnostics.FrameTimeDetailInstrumentation;
 
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -50,6 +51,8 @@ public class IrisSodiumCompatMixinPlugin implements IMixinConfigPlugin {
 
 	@Override
 	public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-
+		if (mixinClassName.equals("net.coderbot.iris.compat.sodium.mixin.diagnostics.MixinFrameTimeDetails")) {
+			FrameTimeDetailInstrumentation.apply(targetClass);
+		}
 	}
 }

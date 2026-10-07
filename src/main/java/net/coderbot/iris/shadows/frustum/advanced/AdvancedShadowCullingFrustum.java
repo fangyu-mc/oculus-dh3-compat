@@ -1,7 +1,6 @@
 package net.coderbot.iris.shadows.frustum.advanced;
 
 import net.coderbot.iris.shadows.frustum.BoxCuller;
-import net.coderbot.iris.vendored.joml.Math;
 import net.coderbot.iris.vendored.joml.Matrix4f;
 import net.coderbot.iris.vendored.joml.Vector3f;
 import net.coderbot.iris.vendored.joml.Vector4f;
@@ -32,7 +31,7 @@ public class AdvancedShadowCullingFrustum extends Frustum {
 	private static final int MAX_CLIPPING_PLANES = 13;
 
 	/**
-	 * We store each plane equation as a Vector4f.
+	 * We pack each plane equation into adjacent primitive coefficients for repeated box tests.
 	 *
 	 * <p>We can represent a plane equation of the form <code>ax + by + cz = d</code> as a 4-dimensional vector
 	 * of the form <code>(a, b, c, -d)</code>. In the special case of a plane that intersects the origin, we get
@@ -59,8 +58,7 @@ public class AdvancedShadowCullingFrustum extends Frustum {
 	 * </ul>
 	 * </p>
 	 */
-	private final Vector4f[] planes = new Vector4f[MAX_CLIPPING_PLANES];
-	private int planeCount = 0;
+	private final ShadowFrustumPlanes planes = new ShadowFrustumPlanes(MAX_CLIPPING_PLANES);
 
 	// The center coordinates of this frustum.
 	private double x;
@@ -85,8 +83,7 @@ public class AdvancedShadowCullingFrustum extends Frustum {
 	}
 
 	private void addPlane(Vector4f plane) {
-		planes[planeCount] = plane;
-		planeCount += 1;
+		planes.add(plane.x(), plane.y(), plane.z(), plane.w());
 	}
 
 	/**
@@ -310,65 +307,6 @@ public class AdvancedShadowCullingFrustum extends Frustum {
 		float i = (float)(maxX - this.x);
 		float j = (float)(maxY - this.y);
 		float k = (float)(maxZ - this.z);
-		return this.checkCornerVisibility(f, g, h, i, j, k) != 0;
-	}
-
-
-	/**
-	 * Checks corner visibility.
-	 * @param minX Minimum X value of the AABB.
-	 * @param minY Minimum Y value of the AABB.
-	 * @param minZ Minimum Z value of the AABB.
-	 * @param maxX Maximum X value of the AABB.
-	 * @param maxY Maximum Y value of the AABB.
-	 * @param maxZ Maximum Z value of the AABB.
-	 * @return 0 if nothing is visible, 1 if everything is visible, 2 if only some corners are visible.
-	 */
-	private int checkCornerVisibility(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
-		boolean inside = true;
-		float outsideBoundX;
-		float outsideBoundY;
-		float outsideBoundZ;
-		float insideBoundX;
-		float insideBoundY;
-		float insideBoundZ;
-
-		for (int i = 0; i < planeCount; ++i) {
-			Vector4f plane = this.planes[i];
-
-			// Check if plane is inside or intersecting.
-			// This is ported from JOML's FrustumIntersection.
-
-			if (plane.x() < 0) {
-				outsideBoundX = minX;
-				insideBoundX = maxX;
-			} else {
-				outsideBoundX = maxX;
-				insideBoundX = minX;
-			}
-
-			if (plane.y() < 0) {
-				outsideBoundY = minY;
-				insideBoundY = maxY;
-			} else {
-				outsideBoundY = maxY;
-				insideBoundY = minY;
-			}
-
-			if (plane.z() < 0) {
-				outsideBoundZ = minZ;
-				insideBoundZ = maxZ;
-			} else {
-				outsideBoundZ = maxZ;
-				insideBoundZ = minZ;
-			}
-
-			if (Math.fma(plane.x(), outsideBoundX, Math.fma(plane.y(), outsideBoundY, plane.z() * outsideBoundZ)) < -plane.w()) {
-				return 0;
-			}
-			inside &= Math.fma(plane.x(), insideBoundX, Math.fma(plane.y(), insideBoundY, plane.z() * insideBoundZ)) >= -plane.w();
-		}
-
-		return 2;
+		return planes.isVisible(f, g, h, i, j, k);
 	}
 }

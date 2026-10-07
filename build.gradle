@@ -178,3 +178,453 @@ tasks.register('terrainOrderCheck', JavaExec) {
     mainClass = 'net.coderbot.iris.compat.sodium.impl.FrontToBackSorterCheck'
 }
 check.dependsOn terrainOrderCheck
+
+tasks.register('skySamplingCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/VectorCubicSamplerCheck.java', 'tests/SkyColorCacheCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('sky-sampling-check'))
+	options.release = 8
+}
+['net.coderbot.iris.math.VectorCubicSamplerCheck', 'net.coderbot.iris.uniforms.SkyColorCacheCheck'].each { checkClass ->
+	def checkTask = tasks.register(checkClass.tokenize('.').last(), JavaExec) {
+		dependsOn skySamplingCheckCompile
+		classpath = files(layout.buildDirectory.dir('sky-sampling-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = checkClass
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('shadowFrustumCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/fixtures/LegacyShadowFrustum.java', 'tests/ShadowFrustumCheck.java', 'tests/ShadowFrustumBenchmark.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('shadow-frustum-check'))
+	options.release = 8
+}
+['ShadowFrustumCheck', 'ShadowFrustumBenchmark'].each { checkClass ->
+	tasks.register(checkClass, JavaExec) {
+		dependsOn shadowFrustumCheckCompile
+		classpath = files(layout.buildDirectory.dir('shadow-frustum-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.shadows.frustum.advanced.' + checkClass
+	}
+}
+check.dependsOn tasks.named('ShadowFrustumCheck')
+
+tasks.register('frameTimeCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/FrameTimeCaptureCheck.java', 'tests/FrameTimeJfrCheck.java', 'tests/FrameTimeDetailsCheck.java'
+	source 'tests/FrameTimeGpuCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('frame-time-check'))
+	options.release = 8
+}
+tasks.register('FrameTimeCaptureCheck', JavaExec) {
+	dependsOn frameTimeCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeCaptureCheck'
+}
+check.dependsOn tasks.named('FrameTimeCaptureCheck')
+
+tasks.register('FrameTimeGpuCheck', JavaExec) {
+	dependsOn frameTimeCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeGpuCheck'
+}
+check.dependsOn tasks.named('FrameTimeGpuCheck')
+
+tasks.register('FrameTimeDetailsCheck', JavaExec) {
+	dependsOn frameTimeCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeDetailsCheck'
+}
+check.dependsOn tasks.named('FrameTimeDetailsCheck')
+
+tasks.register('FrameTimeJfrCheck', JavaExec) {
+	dependsOn frameTimeCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-check')) + sourceSets.main.output
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeJfrCheck'
+	// A separate JVM validates real GC timestamps; it never starts a game or server.
+	jvmArgs '-Xms32m', '-Xmx96m', '-XX:+UseG1GC'
+}
+check.dependsOn tasks.named('FrameTimeJfrCheck')
+
+tasks.register('FrameTimeJfrConcurrentCheck', JavaExec) {
+	dependsOn frameTimeCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-check')) + sourceSets.main.output
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeJfrCheck'
+	args 'concurrent'
+	// Force genuine G1 Remark events only in this isolated diagnostic test JVM.
+	jvmArgs '-Xms32m', '-Xmx96m', '-XX:+UseG1GC', '-XX:+ExplicitGCInvokesConcurrent'
+}
+check.dependsOn tasks.named('FrameTimeJfrConcurrentCheck')
+
+tasks.register('chunkBuildContextCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/ChunkBuildContextCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('chunk-build-context-check'))
+	options.release = 8
+}
+tasks.register('ChunkBuildContextCheck', JavaExec) {
+	dependsOn chunkBuildContextCheckCompile
+	classpath = files(layout.buildDirectory.dir('chunk-build-context-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.compat.sodium.impl.block_context.ChunkBuildContextCheck'
+}
+check.dependsOn tasks.named('ChunkBuildContextCheck')
+
+tasks.register('renderLayerIteratorCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/RenderLayerIteratorCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('render-layer-iterator-check'))
+	options.release = 8
+}
+tasks.register('RenderLayerIteratorCheck', JavaExec) {
+	dependsOn renderLayerIteratorCheckCompile
+	classpath = files(layout.buildDirectory.dir('render-layer-iterator-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.compat.sodium.impl.RenderLayerIteratorCheck'
+	// Rubidium comes from compileClasspath. Also inspect the installed Embeddium, when available.
+	args fileTree('../test/.minecraft/versions/虚无/mods') { include '*embeddium-*.jar' }.files.collect { it.absolutePath }
+}
+check.dependsOn tasks.named('RenderLayerIteratorCheck')
+
+tasks.register('fluidRenderCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/FluidRenderCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('fluid-render-check'))
+	options.release = 8
+}
+tasks.register('FluidRenderCheck', JavaExec) {
+	dependsOn fluidRenderCheckCompile
+	classpath = files(layout.buildDirectory.dir('fluid-render-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.compat.sodium.impl.FluidRenderCheck'
+	args fileTree('../test/.minecraft/versions/虚无/mods') { include '*embeddium-*.jar' }.files.collect { it.absolutePath }
+}
+check.dependsOn tasks.named('FluidRenderCheck')
+
+tasks.register('chunkDrawBatchCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/ChunkDrawBatchCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('chunk-draw-batch-check'))
+	options.release = 8
+}
+tasks.register('ChunkDrawBatchCheck', JavaExec) {
+	dependsOn chunkDrawBatchCheckCompile
+	classpath = files(layout.buildDirectory.dir('chunk-draw-batch-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.compat.sodium.impl.ChunkDrawBatchCheck'
+	args fileTree('../test/.minecraft/versions/虚无/mods') { include '*embeddium-*.jar' }.files.collect { it.absolutePath }
+}
+check.dependsOn tasks.named('ChunkDrawBatchCheck')
+
+tasks.register('biomeColorCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/BiomeColorCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('biome-color-check'))
+	options.release = 8
+}
+tasks.register('BiomeColorCheck', JavaExec) {
+	dependsOn biomeColorCheckCompile
+	classpath = files(layout.buildDirectory.dir('biome-color-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.mixin.color.BiomeColorCheck'
+	// Isolate explicit allocation removal from HotSpot escape-analysis decisions.
+	// This is a CPU-only test JVM, never the game JVM.
+	jvmArgs '-XX:-DoEscapeAnalysis'
+}
+check.dependsOn tasks.named('BiomeColorCheck')
+
+tasks.register('biomeColorCallbackCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/BiomeColorCallbackCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('biome-color-callback-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.compat.embeddium.BiomeColorCallbackCheck$Service\n'
+		}
+	}
+}
+['named', 'srg', 'hooks'].each { mode ->
+	def checkTask = tasks.register('BiomeColorCallbackCheck_' + mode, JavaExec) {
+		dependsOn biomeColorCallbackCheckCompile
+		classpath = files(layout.buildDirectory.dir('biome-color-callback-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.compat.embeddium.BiomeColorCallbackCheck'
+		def extensionJars = fileTree('../test/.minecraft/versions/虚无/mods') { include '*embeddiumextension-*.jar' }.files
+		onlyIf { !extensionJars.empty }
+		args([mode] + extensionJars.collect { it.absolutePath })
+		// A standalone Mixin/bytecode test host, not a game. EA is disabled only for allocation assertions.
+		jvmArgs '-Xverify:all', '-XX:-DoEscapeAnalysis'
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('frameTimeInstrumentationCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/FrameTimeInstrumentationCheck.java', 'tests/FrameTimeMapInstrumentationCheck.java', 'tests/FrameTimeTickInstrumentationCheck.java'
+	source 'tests/FrameTimeTaskInstrumentationCheck.java'
+	source 'tests/BiomeZoomAllocationCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('frame-time-instrumentation-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.FrameTimeInstrumentationCheck$Service\n'
+		}
+		new File(destinationDirectory.get().asFile, 'biome-zoom-check.json').text =
+			'{"required":true,"minVersion":"0.8","compatibilityLevel":"JAVA_8","package":"net.coderbot.iris.mixin.math","client":["MixinFuzzyOffsetBiomeZoomer"]}'
+	}
+}
+tasks.register('FrameTimeInstrumentationCheck', JavaExec) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeInstrumentationCheck'
+	args fileTree('../test/.minecraft/versions/虚无/mods') {
+		include '*embeddium-*.jar', '*DistantHorizons*.jar', 'xaeroworldmap-*.jar', '*DynamicSurroundings-*.jar'
+	}.files.collect { it.absolutePath }
+	// Resolve the Loom production namespace from its configured cache, without launching a client.
+	doFirst {
+		def srgMinecraft = fileTree(new File(gradle.gradleUserHomeDir, "caches/fabric-loom/${minecraft_version}")) {
+			include "*-forge-${minecraft_version}-${forge_version}/minecraft-srg.jar"
+		}.files
+		if (srgMinecraft.isEmpty()) { throw new GradleException('Production SRG Minecraft jar missing for tick instrumentation check') }
+		args srgMinecraft.collect { it.absolutePath }
+	}
+	jvmArgs '-Xverify:all'
+}
+check.dependsOn tasks.named('FrameTimeInstrumentationCheck')
+
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('BiomeZoomAllocationCheck_' + mode, JavaExec) {
+		dependsOn frameTimeInstrumentationCheckCompile
+		classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.BiomeZoomAllocationCheck'
+		args mode
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') { jvmArgs '-XX:-DoEscapeAnalysis' }
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('fireflyQuadCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/FireflyQuadCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('firefly-quad-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.FireflyQuadCheck$Service\n'
+		}
+	}
+}
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('FireflyQuadCheck_' + mode, JavaExec) {
+		dependsOn fireflyQuadCheckCompile
+		classpath = files(layout.buildDirectory.dir('firefly-quad-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.FireflyQuadCheck'
+		def particleJars = fileTree('../test/.minecraft/versions/虚无/mods') { include 'illuminations-forge-1.16.5-*.jar' }.files
+		onlyIf { !particleJars.empty }
+		args([mode] + particleJars.collect { it.absolutePath })
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') { jvmArgs '-XX:-DoEscapeAnalysis' }
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('deferredSoundEffectsCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/DeferredSoundEffectsCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('deferred-sound-effects-check'))
+	options.release = 11
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.DeferredSoundEffectsCheck$Service\n'
+		}
+	}
+}
+tasks.register('DeferredSoundEffectsCheck', JavaExec) {
+	dependsOn deferredSoundEffectsCheckCompile
+	classpath = files(layout.buildDirectory.dir('deferred-sound-effects-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.DeferredSoundEffectsCheck'
+	def soundJars = fileTree('../test/.minecraft/versions/虚无/mods') { include '*DynamicSurroundings-*.jar' }.files
+	onlyIf { !soundJars.empty }
+	args soundJars.collect { it.absolutePath }
+	jvmArgs '-Xverify:all'
+}
+check.dependsOn tasks.named('DeferredSoundEffectsCheck')
+
+tasks.register('frameTimeJfrRetentionCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/FrameTimeJfrRetentionCheck.java'
+	classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('frame-time-jfr-retention-check'))
+	options.release = 11
+	options.compilerArgs += ['-proc:none']
+}
+tasks.register('FrameTimeJfrRetentionCheck', JavaExec) {
+	dependsOn frameTimeJfrRetentionCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-jfr-retention-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeJfrRetentionCheck'
+	// Only this isolated verification JVM uses a small JFR buffer; no game is started.
+	jvmArgs '-XX:FlightRecorderOptions=memorysize=1m'
+}
+check.dependsOn tasks.named('FrameTimeJfrRetentionCheck')
+
+tasks.register('frameTimeJfrSurvivalCheckCompile', JavaCompile) {
+	dependsOn classes
+	source 'tests/FrameTimeJfrSurvivalCheck.java'
+	classpath = sourceSets.main.output
+	destinationDirectory.set(layout.buildDirectory.dir('frame-time-jfr-survival-check'))
+	options.release = 11
+	options.compilerArgs += ['-proc:none']
+}
+tasks.register('FrameTimeJfrSurvivalCheck', JavaExec) {
+	dependsOn frameTimeJfrSurvivalCheckCompile
+	classpath = files(layout.buildDirectory.dir('frame-time-jfr-survival-check')) + sourceSets.main.output
+	mainClass = 'net.coderbot.iris.diagnostics.FrameTimeJfrSurvivalCheck'
+	// Natural allocation pressure only in this standalone JVM; never starts Minecraft.
+	jvmArgs '-Xms32m', '-Xmx64m', '-XX:+UseG1GC'
+}
+check.dependsOn tasks.named('FrameTimeJfrSurvivalCheck')
+
+tasks.register('tesEntityTypeCacheCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/TesEntityTypeCacheCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('tes-entity-type-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.TesEntityTypeCacheCheck$Service\n'
+		}
+	}
+}
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('TesEntityTypeCacheCheck_' + mode, JavaExec) {
+		dependsOn tesEntityTypeCacheCheckCompile
+		classpath = files(layout.buildDirectory.dir('tes-entity-type-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.TesEntityTypeCacheCheck'
+		def tesJars = fileTree('../test/.minecraft/versions/虚无/mods') { include '*TES-forge-*.jar' }.files
+		onlyIf { !tesJars.empty }
+		args([mode] + tesJars.collect { it.absolutePath })
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') { jvmArgs '-XX:-DoEscapeAnalysis' }
+	}
+	check.dependsOn checkTask
+}
+
+tasks.register('dhCloudAllocationCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/DhCloudAllocationCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('dh-cloud-allocation-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.DhCloudAllocationCheck$Service\n'
+		}
+	}
+}
+
+tasks.register('renderAllocationCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/RenderAllocationCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('render-allocation-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		new File(destinationDirectory.get().asFile, 'render-allocation-check.json').text =
+			'{"required":true,"minVersion":"0.8","compatibilityLevel":"JAVA_8","package":"net.coderbot.iris.mixin.compat.minecraft","plugin":"net.coderbot.iris.mixin.compat.CompatMixinPlugin","client":["MixinMatrix4fScale","MixinMatrix3fScale","MixinPoseStackScale","MixinFullBlockBounds"]}'
+	}
+}
+
+tasks.register('skyRgbAllocationCheckCompile', JavaCompile) {
+	dependsOn frameTimeInstrumentationCheckCompile
+	source 'tests/SkyRgbAllocationCheck.java'
+	classpath = files(layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+	destinationDirectory.set(layout.buildDirectory.dir('sky-rgb-allocation-check'))
+	options.release = 8
+	options.compilerArgs += ['-proc:none']
+	doLast {
+		def services = new File(destinationDirectory.get().asFile, 'META-INF/services')
+		services.mkdirs()
+		['IMixinService', 'IGlobalPropertyService'].each { service ->
+			new File(services, 'org.spongepowered.asm.service.' + service).text =
+				'net.coderbot.iris.diagnostics.SkyRgbAllocationCheck$Service\n'
+		}
+	}
+}
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('SkyRgbAllocationCheck_' + mode, JavaExec) {
+		dependsOn skyRgbAllocationCheckCompile
+		classpath = files(layout.buildDirectory.dir('sky-rgb-allocation-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.SkyRgbAllocationCheck'
+		def abnormalsJars = fileTree('../test/.minecraft/versions/虚无/mods') { include '*abnormals_core-*.jar' }.files
+		onlyIf { !abnormalsJars.empty }
+		args([mode] + abnormalsJars.collect { it.absolutePath })
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') jvmArgs '-XX:-DoEscapeAnalysis'
+	}
+	check.dependsOn checkTask
+}
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('RenderAllocationCheck_' + mode, JavaExec) {
+		dependsOn renderAllocationCheckCompile
+		classpath = files(layout.buildDirectory.dir('render-allocation-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.RenderAllocationCheck'
+		args mode
+		doFirst {
+			def srgMinecraft = fileTree(new File(gradle.gradleUserHomeDir, "caches/fabric-loom/${minecraft_version}")) {
+				include "*-forge-${minecraft_version}-${forge_version}/minecraft-srg.jar"
+			}.files
+			if (srgMinecraft.empty) throw new GradleException('Production SRG Minecraft jar missing for render allocation check')
+			args srgMinecraft.collect { it.absolutePath }
+		}
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') jvmArgs '-XX:-DoEscapeAnalysis'
+	}
+	check.dependsOn checkTask
+}
+['default', 'no-ea'].each { mode ->
+	def checkTask = tasks.register('DhCloudAllocationCheck_' + mode, JavaExec) {
+		dependsOn dhCloudAllocationCheckCompile
+		classpath = files(layout.buildDirectory.dir('dh-cloud-allocation-check'), layout.buildDirectory.dir('frame-time-instrumentation-check')) + sourceSets.main.output + sourceSets.main.compileClasspath
+		mainClass = 'net.coderbot.iris.diagnostics.DhCloudAllocationCheck'
+		def dhJars = fileTree('../test/.minecraft/versions/虚无/mods') { include 'DistantHorizons-*.jar' }.files
+		onlyIf { !dhJars.empty }
+		args([mode] + dhJars.collect { it.absolutePath })
+		jvmArgs '-Xverify:all'
+		if (mode == 'no-ea') { jvmArgs '-XX:-DoEscapeAnalysis' }
+	}
+	check.dependsOn checkTask
+}

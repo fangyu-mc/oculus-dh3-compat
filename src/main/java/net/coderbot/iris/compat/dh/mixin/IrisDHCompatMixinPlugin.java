@@ -1,6 +1,9 @@
 package net.coderbot.iris.compat.dh.mixin;
 
 import net.minecraftforge.fml.loading.FMLLoader;
+import net.coderbot.iris.compat.dh.DhCloudAllocationOptimizer;
+import net.coderbot.iris.diagnostics.FrameTimeDetailInstrumentation;
+import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -48,6 +51,12 @@ public class IrisDHCompatMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-
+        if (mixinClassName.equals("net.coderbot.iris.compat.dh.mixin.MixinFrameTimeDetails")) {
+            FrameTimeDetailInstrumentation.apply(targetClass);
+        } else if (mixinClassName.equals("net.coderbot.iris.compat.dh.mixin.MixinDHCloudAllocation")) {
+            int changed = DhCloudAllocationOptimizer.optimize(targetClass);
+            LogManager.getLogger("Oculus/DH").info("DH cloud coordinate optimization: {} method(s) in {}{}",
+                    changed, targetClassName, changed == 0 ? " (original API fallback retained)" : "");
+        }
     }
 }

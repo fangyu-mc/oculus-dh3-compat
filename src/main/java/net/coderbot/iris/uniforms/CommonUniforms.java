@@ -49,6 +49,7 @@ public final class CommonUniforms {
 	private static final Vector2i ZERO_VECTOR_2i = new Vector2i();
 	private static final Vector4i ZERO_VECTOR_4i = new Vector4i(0, 0, 0, 0);
 	private static final Vector3d ZERO_VECTOR_3d = new Vector3d();
+	private static final SkyColorCache<Vector3d> SKY_COLOR = new SkyColorCache<>(CommonUniforms::sampleSkyColor);
 
 	private CommonUniforms() {
 		// no construction allowed
@@ -194,11 +195,22 @@ public final class CommonUniforms {
 
 	private static Vector3d getSkyColor() {
 		if (client.level == null || client.cameraEntity == null) {
+			SKY_COLOR.invalidate();
 			return ZERO_VECTOR_3d;
 		}
 
+		BlockPos position = client.cameraEntity.blockPosition();
+		return SKY_COLOR.get(SystemTimeUniforms.COUNTER.getFrameId(), client.level, client.cameraEntity,
+				position.getX(), position.getY(), position.getZ(), CapturedRenderingState.INSTANCE.getTickDelta());
+	}
+
+	private static Vector3d sampleSkyColor() {
 		return JomlConversions.fromVec3(client.level.getSkyColor(client.cameraEntity.blockPosition(),
 				CapturedRenderingState.INSTANCE.getTickDelta()));
+	}
+
+	public static void invalidateSkyColor() {
+		SKY_COLOR.invalidate();
 	}
 
 	static float getBlindness() {

@@ -15,6 +15,7 @@ import com.mojang.math.Matrix4f;
 import com.mojang.math.Vector3f;
 
 import net.coderbot.iris.Iris;
+import net.coderbot.iris.diagnostics.FrameTimeRecorder;
 import net.coderbot.iris.gl.program.Program;
 import net.coderbot.iris.layer.IsOutlineRenderStateShard;
 import net.coderbot.iris.layer.OuterWrappedRenderType;
@@ -84,7 +85,12 @@ public class MixinLevelRenderer {
 	// avoid breaking other mods such as Light Overlay: https://github.com/IrisShaders/Iris/issues/1356
 	@Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "net/minecraft/client/renderer/LevelRenderer.setupRender (Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZIZ)V"))
 	private void iris$renderTerrainShadows(PoseStack poseStack, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f projection, CallbackInfo callback) {
-		pipeline.renderShadows((LevelRendererAccessor) this, camera);
+		FrameTimeRecorder.beginPhase(FrameTimeRecorder.SHADOW);
+		try {
+			pipeline.renderShadows((LevelRendererAccessor) this, camera);
+		} finally {
+			FrameTimeRecorder.endPhase(FrameTimeRecorder.SHADOW);
+		}
 	}
 
 	@Inject(method = "renderLevel", at = @At(value = "INVOKE", target = RENDER_SKY))

@@ -5,6 +5,18 @@
   "plugin": "net.coderbot.iris.mixin.compat.CompatMixinPlugin",
   "compatibilityLevel": "JAVA_8",
   "client": [
+    "minecraft.MixinSkyRgbSampler",
+    "minecraft.MixinMatrix4fScale",
+    "minecraft.MixinMatrix3fScale",
+    "minecraft.MixinPoseStackScale",
+    "minecraft.MixinFullBlockBounds",
+    "minecraft.MixinFrameTimeDetails",
+    "environs.MixinFrameTimeDetails",
+    "sndctrl.MixinDeferredInitialSoundEffects",
+    "tslatentitystatus.MixinTesEntityTypeCache",
+    "xaeroworldmap.MixinFrameTimeDetails",
+    "embeddiumextension.MixinBiomeColors",
+    "illuminations.MixinFireflyParticle",
     "epicfight.MixinEpicFightRenderTypes",
     "pixelmon.MixinNormalizedFace"
   ],

@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -18,7 +17,6 @@ import me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer;
 import me.jellysquid.mods.sodium.client.render.chunk.ChunkRenderBackend;
 import me.jellysquid.mods.sodium.client.render.chunk.ChunkRenderContainer;
 import me.jellysquid.mods.sodium.client.render.chunk.ChunkRenderManager;
-import me.jellysquid.mods.sodium.client.render.chunk.cull.ChunkFaceFlags;
 import me.jellysquid.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPassManager;
@@ -61,6 +59,9 @@ public class MixinChunkRenderManager implements SwappableChunkRenderManager {
 
 	@Shadow(remap = false)
 	private int visibleChunkCount;
+
+	@Shadow(remap = false)
+	private boolean useBlockFaceCulling;
 
 	@Unique
 	private ChunkRenderList<?>[] chunkRenderListsSwap;
@@ -130,13 +131,13 @@ public class MixinChunkRenderManager implements SwappableChunkRenderManager {
 		return render.canRebuild();
 	}
 
-	@Inject(method = "computeVisibleFaces", at = @At("HEAD"), cancellable = true, remap = false)
-	private void iris$disableBlockFaceCullingInShadowPass(ChunkRenderContainer<?> render,
-														  CallbackInfoReturnable<Integer> cir) {
-		// TODO: Enable chunk face culling during the shadow pass
-		if (ShadowRenderingState.areShadowsCurrentlyBeingRendered()) {
-			cir.setReturnValue(ChunkFaceFlags.ALL);
-		}
+	@Redirect(method = "computeVisibleFaces", remap = false, at = @At(value = "FIELD",
+			target = "Lme/jellysquid/mods/sodium/client/render/chunk/ChunkRenderManager;useBlockFaceCulling:Z",
+			remap = false))
+	private boolean iris$useBlockFaceCulling(ChunkRenderManager<?> manager) {
+		// The native disabled path already returns ALL. Reuse it without allocating
+		// a cancellable callback for every chunk in both camera and shadow passes.
+		return useBlockFaceCulling && !ShadowRenderingState.areShadowsCurrentlyBeingRendered();
 	}
 
 	@Redirect(method = "reset()V", remap = false,

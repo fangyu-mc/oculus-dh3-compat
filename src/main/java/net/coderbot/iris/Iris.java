@@ -33,6 +33,7 @@ import com.mojang.blaze3d.platform.GlDebug;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.coderbot.iris.config.IrisConfig;
+import net.coderbot.iris.diagnostics.FrameTimeRecorder;
 import net.coderbot.iris.gl.GLDebug;
 import net.coderbot.iris.gl.shader.StandardMacros;
 import net.coderbot.iris.gui.screen.ShaderPackScreen;
@@ -106,6 +107,7 @@ public class Iris {
 		try {
 			FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onInitializeClient);
 			MinecraftForge.EVENT_BUS.addListener(this::onKeyInput);
+			MinecraftForge.EVENT_BUS.addListener(FrameTimeRecorder::onChat);
 
 			ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST, () -> Pair.of(() -> FMLNetworkConstants.IGNORESERVERONLY, (a, b) -> true));
 		}catch(Exception ignored) {}

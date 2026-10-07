@@ -42,6 +42,7 @@ public final class SystemTimeUniforms {
 	 */
 	public static class FrameCounter implements IntSupplier {
 		private int count;
+		private long frameId;
 
 		private FrameCounter() {
 			this.count = 0;
@@ -54,10 +55,17 @@ public final class SystemTimeUniforms {
 
 		public void beginFrame() {
 			count = (count + 1) % 720720;
+			frameId++;
 		}
 
 		public void reset() {
 			count = 0;
+			frameId++;
+		}
+
+		/** Internal cache identity; unlike the shader uniform, it does not restart on pipeline reload. */
+		public long getFrameId() {
+			return frameId;
 		}
 	}
 

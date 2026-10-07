@@ -7,12 +7,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.coderbot.iris.Iris;
+import net.coderbot.iris.diagnostics.FrameTimeRecorder;
+import net.coderbot.iris.uniforms.CommonUniforms;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 
 @Mixin(Minecraft.class)
 public class MixinMinecraft_PipelineManagement {
+	@Inject(method = "runTick(Z)V", at = @At("RETURN"))
+	private void iris$recordFrameTime(boolean renderLevel, CallbackInfo ci) {
+		FrameTimeRecorder.onFrame();
+	}
+
 	/**
 	 * Should run before the Minecraft.level field is updated after disconnecting from a server or leaving a singleplayer world
 	 */
@@ -46,6 +53,8 @@ public class MixinMinecraft_PipelineManagement {
 	 */
 	@Inject(method = "updateLevelInEngines", at = @At("HEAD"))
 	private void iris$resetPipeline(@Nullable ClientLevel level, CallbackInfo ci) {
+		// Release the previous world's reference even when no further sky uniforms are requested.
+		CommonUniforms.invalidateSkyColor();
 		if (Iris.getCurrentDimension() != Iris.lastDimension) {
 			Iris.logger.info("Reloading pipeline on dimension change: " + Iris.lastDimension + " => " + Iris.getCurrentDimension());
 			// Destroy pipelines when changing dimensions.
